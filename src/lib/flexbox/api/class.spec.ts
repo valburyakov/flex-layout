@@ -65,15 +65,50 @@ describe('class directive', () => {
         });
       });
 
-  it('should keep existing class selector', () => {
+  it('should merge `ngClass` values with any `class` values', () => {
     fixture = createTestComponent(`
-        <div class="existing-class" ngClass.xs="xs-class">
+        <div class="class0" ngClass="class1 class2">
+        </div>
+    `);
+
+    expectNativeEl(fixture).toHaveCssClass('class0');
+    expectNativeEl(fixture).toHaveCssClass('class1');
+    expectNativeEl(fixture).toHaveCssClass('class2');
+  });
+
+  it('should keep the raw existing `class` with responsive updates', () => {
+    fixture = createTestComponent(`
+        <div class="existing-class" ngClass="class1" ngClass.xs="xs-class">
+        </div>
+    `);
+
+    expectNativeEl(fixture).toHaveCssClass('existing-class');
+    expectNativeEl(fixture).toHaveCssClass('class1');
+
+    activateMediaQuery('xs');
+    expectNativeEl(fixture).toHaveCssClass('xs-class');
+    expectNativeEl(fixture).toHaveCssClass('existing-class');
+    expectNativeEl(fixture).not.toHaveCssClass('class1');
+
+    activateMediaQuery('lg');
+    expectNativeEl(fixture).not.toHaveCssClass('xs-class');
+    expectNativeEl(fixture).toHaveCssClass('existing-class');
+    expectNativeEl(fixture).toHaveCssClass('class1');
+  });
+
+
+  it('should keep allow removal of class selector', () => {
+    fixture = createTestComponent(`
+        <div 
+            class="existing-class" 
+            [ngClass.xs]="{'xs-class':true, 'existing-class':false}">
         </div>
     `);
 
     expectNativeEl(fixture).toHaveCssClass('existing-class');
     activateMediaQuery('xs');
     expectNativeEl(fixture).not.toHaveCssClass('existing-class');
+    expectNativeEl(fixture).toHaveCssClass('xs-class');
 
     activateMediaQuery('lg');
     expectNativeEl(fixture).toHaveCssClass('existing-class');
@@ -83,15 +118,22 @@ describe('class directive', () => {
   it('should keep existing ngClass selector', () => {
     // @see documentation for @angular/core ngClass =http://bit.ly/2mz0LAa
     fixture = createTestComponent(`
-          <div ngClass="existing-class" ngClass.xs="existing-class xs-class">
+          <div class="always" 
+               ngClass="existing-class" 
+               ngClass.xs="existing-class xs-class">
           </div>
       `);
 
-    expectNativeEl(fixture).toHaveCssClass('existing-class');
-    activateMediaQuery('xs');
+    expectNativeEl(fixture).toHaveCssClass('always');
     expectNativeEl(fixture).toHaveCssClass('existing-class');
 
+    activateMediaQuery('xs');
+    expectNativeEl(fixture).toHaveCssClass('always');
+    expectNativeEl(fixture).toHaveCssClass('existing-class');
+    expectNativeEl(fixture).toHaveCssClass('xs-class');
+
     activateMediaQuery('lg');
+    expectNativeEl(fixture).toHaveCssClass('always');
     expectNativeEl(fixture).toHaveCssClass('existing-class');
     expectNativeEl(fixture).not.toHaveCssClass('xs-class');
   });
@@ -112,21 +154,23 @@ describe('class directive', () => {
 
   it('should work with ngClass object notation', () => {
     fixture = createTestComponent(`
-        <div [ngClass]="{'xs-1': hasXs1, 'xs-3': hasXs3}" 
-             [ngClass.xs]="{'xs-1': hasXs1, 'xs-2': hasXs2}">
+        <div [ngClass]="{'x1': hasX1, 'x3': hasX3}" 
+             [ngClass.xs]="{'x1': hasX1, 'x2': hasX2}">
         </div>
     `);
-    activateMediaQuery('xs');
-    expectNativeEl(fixture, {hasXs1: true, hasXs2: false}).toHaveCssClass('xs-1');
-    expectNativeEl(fixture, {hasXs1: true, hasXs2: false}).not.toHaveCssClass('xs-2');
+    expectNativeEl(fixture, {hasX1: true, hasX2: true, hasX3: true}).toHaveCssClass('x1');
+    expectNativeEl(fixture, {hasX1: true, hasX2: true, hasX3: true}).not.toHaveCssClass('x2');
+    expectNativeEl(fixture, {hasX1: true, hasX2: true, hasX3: true}).toHaveCssClass('x3');
 
-    expectNativeEl(fixture, {hasXs1: false, hasXs2: true}).toHaveCssClass('xs-2');
-    expectNativeEl(fixture, {hasXs1: false, hasXs2: true}).not.toHaveCssClass('xs-1');
+    activateMediaQuery('X');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: false}).toHaveCssClass('x1');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: false}).not.toHaveCssClass('x2');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: false}).not.toHaveCssClass('x3');
 
     activateMediaQuery('md');
-    expectNativeEl(fixture, {hasXs1: true, hasX2: false, hasXs3: true}).toHaveCssClass('xs-3');
-    expectNativeEl(fixture, {hasXs1: true, hasX2: false, hasXs3: true}).not.toHaveCssClass('xs-2');
-    expectNativeEl(fixture, {hasXs1: true, hasX2: false, hasXs3: true}).toHaveCssClass('xs-1');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: true}).toHaveCssClass('x1');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: true}).not.toHaveCssClass('x2');
+    expectNativeEl(fixture, {hasX1: true, hasX2: false, hasX3: true}).toHaveCssClass('x3');
   });
 
   it('should work with ngClass array notation', () => {
@@ -151,6 +195,7 @@ describe('class directive', () => {
 export class TestClassComponent implements OnInit {
   hasXs1: boolean;
   hasXs2: boolean;
+  hasXs3: boolean;
 
   constructor(private media: ObservableMedia) {
   }
